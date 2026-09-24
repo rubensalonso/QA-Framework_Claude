@@ -1,0 +1,22 @@
+# Entorno
+.venv/
+venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Artefactos de ejecución
+reports/
+test-results/
+logs/
+downloads/
+
+# IDEs
+.idea/
+.vscode/
+*.swp

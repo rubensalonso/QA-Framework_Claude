@@ -1,0 +1,112 @@
+[project]
+name = "qa-framework-automationexercise"
+version = "1.0.0"
+description = "Framework de automatización UI + API + Performance con Python, Pytest y Playwright."
+readme = "README.md"
+requires-python = ">=3.11"
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# `pythonpath` permite importar `framework` sin instalarlo como paquete.
+pythonpath = ["."]
+# --strict-markers: un marker mal escrito rompe la ejecución en vez de ignorarse en silencio.
+# -ra: resumen de todo lo que no pasó (skips, xfails, errores) al final.
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--alluredir=reports/allure-results",
+    "--html=reports/report.html",
+    "--self-contained-html",
+    # Artefactos de Playwright: solo se guardan cuando el test falla (ahorra disco en CI).
+    "--tracing=retain-on-failure",
+    "--screenshot=only-on-failure",
+    "--output=test-results",
+]
+markers = [
+    "unit: Tests del propio framework (sin red ni navegador).",
+    "smoke: Subconjunto crítico y rápido. Se ejecuta en cada PR.",
+    "regression: Suite completa de regresión.",
+    "ui: Pruebas de interfaz con navegador.",
+    "api: Pruebas de API (sin navegador).",
+    "e2e: Flujos de negocio de punta a punta.",
+    "performance: Pruebas de rendimiento (web vitals / SLA de API).",
+    "negative: Casos negativos y casos borde.",
+    "security: Payloads maliciosos (inyección, XSS) — validan que la app no se rompa.",
+]
+# Logging: pytest captura los logs y los adjunta al reporte cuando un test falla.
+log_level = "INFO"
+log_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+log_date_format = "%H:%M:%S"
+log_cli_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+log_cli_date_format = "%H:%M:%S"
+# pytest-timeout: un test que tarda más de esto está colgado; mejor fallar que bloquear el pipeline.
+timeout = 300
+
+# ---------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = [".venv", "reports", "test-results"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "PT",       # flake8-pytest-style
+    "RUF",      # reglas propias de ruff
+    "ANN",      # type hints obligatorios
+    "D",        # docstrings
+    "N",        # pep8-naming
+    "BLE",      # prohíbe `except Exception` sin justificación explícita
+]
+ignore = [
+    "D100", "D104",   # docstring de módulo/paquete: opcional
+    "D105", "D107",   # docstring en métodos mágicos / __init__
+    "D203", "D213",   # conflictos de estilo entre reglas D
+    "ANN401",         # Any es válido para payloads JSON arbitrarios
+    "RUF001", "RUF002", "RUF003",  # permitir caracteres unicode en textos en español
+]
+
+[tool.ruff.lint.per-file-ignores]
+# En tests, @allure.title cumple el rol del docstring y los argumentos de parametrize/fixtures
+# no se anotan por convención de pytest (el tipo lo define la fixture, no el test).
+"tests/**" = ["D101", "D102", "D103", "ANN001", "ANN201"]
+"**/conftest.py" = ["D103"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+exclude = ["^\\.venv/", "^reports/", "^test-results/"]
+
+[[tool.mypy.overrides]]
+module = ["allure.*", "allure_commons.*", "locust.*", "pytest_html.*", "faker.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Locust no publica type hints completos: sus decoradores y métodos se consideran "untyped".
+module = ["locustfile"]
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+# Los tests usan fixtures inyectadas por pytest; no exigimos tipado estricto de retorno.
+module = ["tests.*"]
+disallow_untyped_defs = false

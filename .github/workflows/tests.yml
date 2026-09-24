@@ -1,0 +1,174 @@
+# Pipeline de calidad.
+#   - Pull requests: lint + tipado + smoke (rápido, bloquea el merge si falla).
+#   - Push a main y nightly: regresión completa en Chromium y Firefox + performance.
+#   - Manual (workflow_dispatch): permite elegir marker y navegador.
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * 1-5"   # nightly, días hábiles 05:00 UTC
+  workflow_dispatch:
+    inputs:
+      marker:
+        description: "Expresión de markers (-m). Ej: smoke, api, 'ui and not e2e'"
+        default: "regression"
+      browser:
+        description: "Navegador"
+        type: choice
+        options: [chromium, firefox, webkit]
+        default: chromium
+
+# Si se pushea de nuevo a la misma rama, se cancela la corrida anterior (ahorra minutos de CI).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  # Paralelismo BAJO a propósito: el SUT es un sitio público con WAF que bloquea ráfagas.
+  XDIST_WORKERS: "2"
+
+jobs:
+  lint:
+    name: Lint, tipado y unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy framework performance
+      - name: Tests unitarios del framework
+        run: pytest -m unit
+
+  api:
+    name: API
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      # La suite API usa Playwright solo como cliente HTTP: no necesita navegadores.
+      - name: Ejecutar tests de API
+        # `security` se excluye de las corridas automáticas: el WAF del sitio banea IPs que envían
+        # payloads de ataque repetidos. Se ejecutan a demanda con workflow_dispatch (marker=security).
+        run: >
+          pytest -m "api and not performance and not security"
+          -n ${{ env.XDIST_WORKERS }}
+          --reruns 1 --reruns-delay 5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-reports
+          path: |
+            reports/
+            logs/
+          retention-days: 14
+
+  ui:
+    name: UI (${{ matrix.browser }})
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false   # que un navegador falle no cancela el otro: queremos ver ambos resultados
+      matrix:
+        browser: ${{ github.event_name == 'pull_request' && fromJSON('["chromium"]') || fromJSON('["chromium","firefox"]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps ${{ matrix.browser }}
+      - name: Elegir suite
+        id: suite
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "marker=smoke and ui" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "marker=${{ inputs.marker }} and ui" >> "$GITHUB_OUTPUT"
+          else
+            echo "marker=regression and ui and not security" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Ejecutar tests de UI
+        # --reruns: SOLO en CI y con 1 reintento. Un test que necesita reintentos se reporta
+        # como "rerun" en el resumen: es una señal de flakiness a investigar, no a ocultar.
+        run: >
+          pytest -m "${{ steps.suite.outputs.marker }}"
+          --browser ${{ matrix.browser }}
+          -n ${{ env.XDIST_WORKERS }}
+          --reruns 1 --reruns-delay 5
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-reports-${{ matrix.browser }}
+          path: |
+            reports/
+            test-results/
+            logs/
+          retention-days: 14
+
+  performance:
+    name: Performance
+    needs: [api, ui]
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      # Secuencial (sin -n): el paralelismo distorsiona las mediciones de tiempo.
+      - name: Web vitals y SLA de API
+        run: pytest -m performance --alluredir=reports/allure-results-perf
+      - name: Prueba de carga (Locust, límites conservadores)
+        run: locust --config performance/load/locust.conf
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports
+          path: reports/
+          retention-days: 30
+
+  allure-report:
+    name: Reporte Allure
+    needs: [api, ui]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-reports*"
+          path: downloaded
+      - name: Unificar resultados
+        run: |
+          mkdir -p allure-results
+          find downloaded -path "*allure-results*" -type f -exec cp {} allure-results/ \;
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Generar reporte
+        run: |
+          npm install -g allure-commandline
+          allure generate allure-results --clean -o allure-report
+      - uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+          retention-days: 30

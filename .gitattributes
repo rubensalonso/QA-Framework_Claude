@@ -1,0 +1,8 @@
+# Finales de línea LF en el repositorio para todos los archivos de texto.
+# Evita diffs "fantasma" entre Windows (CRLF) y el CI en Linux (LF).
+* text=auto eol=lf
+
+# Binarios: nunca convertir.
+*.png binary
+*.jpg binary
+*.zip binary

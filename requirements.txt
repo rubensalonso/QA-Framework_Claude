@@ -1,0 +1,24 @@
+# Dependencias de ejecución de la suite.
+# Se usan cotas mínimas (>=) + tope de versión mayor (<N) para recibir parches de seguridad
+# sin exponerse a cambios incompatibles. Para builds 100% reproducibles, generar un lock
+# con `pip freeze > requirements.lock` y usarlo en CI.
+
+# Núcleo
+playwright>=1.47,<2
+pytest>=8.3,<10
+pytest-playwright>=0.5.2,<1
+
+# Plugins de pytest
+pytest-xdist>=3.6,<4           # ejecución en paralelo (-n auto)
+pytest-rerunfailures>=14,<17   # reintentos controlados (solo en CI, ver README)
+pytest-timeout>=2.3,<3         # corta tests colgados
+pytest-html>=4.1,<5            # reporte HTML autocontenido
+allure-pytest>=2.13,<3         # reporte Allure
+
+# Datos, modelos y configuración
+pydantic>=2.8,<3
+pydantic-settings>=2.4,<3
+Faker>=28
+
+# Performance (carga)
+locust>=2.31,<3

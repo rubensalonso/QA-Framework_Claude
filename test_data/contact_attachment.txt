@@ -1,0 +1,2 @@
+Archivo de prueba para el formulario de contacto.
+Generado por el framework de automatización. Puede eliminarse sin consecuencias.

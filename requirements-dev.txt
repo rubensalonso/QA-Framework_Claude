@@ -1,0 +1,4 @@
+# Herramientas de calidad de código (lint, tipado). Incluye las dependencias de ejecución.
+-r requirements.txt
+ruff>=0.6
+mypy>=1.11

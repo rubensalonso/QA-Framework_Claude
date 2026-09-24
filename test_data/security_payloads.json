@@ -1,0 +1,11 @@
+[
+  {"id": "sql-injection-or", "value": "' OR '1'='1"},
+  {"id": "sql-injection-comment", "value": "admin'--"},
+  {"id": "sql-injection-union", "value": "' UNION SELECT NULL, NULL --"},
+  {"id": "xss-script-tag", "value": "<script>alert('xss')</script>"},
+  {"id": "xss-img-onerror", "value": "<img src=x onerror=alert(1)>"},
+  {"id": "path-traversal", "value": "../../../../etc/passwd"},
+  {"id": "template-injection", "value": "{{7*7}}${7*7}"},
+  {"id": "unicode-emoji", "value": "テスト 🚀 ñandú"},
+  {"id": "very-long-string", "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}
+]

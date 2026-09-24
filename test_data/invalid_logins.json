@@ -1,0 +1,6 @@
+[
+  {"id": "unregistered-email", "email": "not.registered.qa@example.com", "password": "Whatever123!"},
+  {"id": "uppercase-unregistered", "email": "NOT.REGISTERED.QA@EXAMPLE.COM", "password": "Whatever123!"},
+  {"id": "email-with-spaces", "email": "  spaced.qa@example.com  ", "password": "Whatever123!"},
+  {"id": "sql-injection", "email": "qa@example.com' OR '1'='1", "password": "' OR '1'='1"}
+]
