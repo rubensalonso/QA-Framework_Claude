@@ -92,7 +92,7 @@ class ProductDetailPage(BasePage):
             continue_shopping: Cerrar el modal de confirmación al terminar.
         """
         self.quantity.fill(str(quantity))
-        self.add_to_cart_button.click()
+        self.click_expecting_ajax(self.add_to_cart_button, "/add_to_cart/")
         self.cart_modal.should_be_visible()
         if continue_shopping:
             self.cart_modal.continue_shopping()

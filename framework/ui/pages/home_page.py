@@ -47,5 +47,5 @@ class HomePage(BasePage):
         self.recommended_items.scroll_into_view_if_needed()
         # El carrusel muestra varios "item" y solo uno está activo: se filtra por visibilidad.
         card = self.recommended_items.locator(".item.active .productinfo").filter(has_text=product_name)
-        card.locator(".add-to-cart").click()
+        self.click_expecting_ajax(card.locator(".add-to-cart"), "/add_to_cart/")
         self.cart_modal.should_be_visible()

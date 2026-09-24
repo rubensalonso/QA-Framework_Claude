@@ -9,6 +9,7 @@ from playwright.sync_api import Page, expect
 from framework.api import AutomationExerciseApi
 from framework.api.schemas import ProductsResponse
 from framework.data import User
+from framework.ui.browser_setup import BackendUnavailableError
 from framework.ui.pages import CartPage, HomePage, LoginPage, ProductDetailPage, ProductsPage
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
@@ -89,6 +90,21 @@ class TestCart:
         cart.remove_product(1)
 
         assert [i.product_id for i in cart.items()] == [2]
+
+    @pytest.mark.negative
+    @allure.title("Si el backend falla al borrar (503), el framework lo reporta al instante")
+    def test_remove_product_backend_failure_is_reported(self, page: Page):
+        # Reproduce de forma determinística un 503 real observado en CI, simulando el backend
+        # con page.route (mock de red): no depende de que el sitio falle de verdad.
+        ProductsPage(page).open().add_to_cart(1)
+        cart = CartPage(page).open()
+        page.route("**/delete_cart/**", lambda route: route.fulfill(status=503, body="Service Unavailable"))
+
+        with pytest.raises(BackendUnavailableError, match="HTTP 503"):
+            cart.remove_product(1)
+
+        # Defecto del SUT documentado: ante el error, la fila sigue y la UI no muestra ningún mensaje.
+        expect(cart.row(1)).to_be_visible()
 
     @pytest.mark.negative
     @allure.title("Carrito vacío muestra el mensaje correspondiente")

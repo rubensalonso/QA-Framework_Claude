@@ -56,7 +56,7 @@ AutomationExercise ganó porque **un solo sitio cubre las tres capas** que un fr
 |---|---|---|
 | `tests/unit` | 43 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno |
 | `tests/api` | 50 | Contratos (Pydantic), códigos de negocio, CRUD de cuentas, métodos no soportados, inyección |
-| `tests/ui` | 64 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
+| `tests/ui` | 65 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
 | `tests/performance` | 14 | Navigation Timing, Core Web Vitals (LCP/CLS), SLA de latencia p95 de API |
 | `performance/load` | — | Prueba de carga con Locust (con topes de seguridad incorporados) |
 

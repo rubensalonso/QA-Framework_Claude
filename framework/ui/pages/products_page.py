@@ -89,7 +89,7 @@ class ProductsPage(BasePage):
         # Al hacer hover, un overlay animado cubre el botón original. Se reproduce el gesto del
         # usuario (hover + click en el botón del overlay) para no pelear contra la animación.
         card.hover()
-        card.locator(".product-overlay .add-to-cart").click()
+        self.click_expecting_ajax(card.locator(".product-overlay .add-to-cart"), f"/add_to_cart/{product_id}")
         self.cart_modal.should_be_visible()
         if continue_shopping:
             self.cart_modal.continue_shopping()

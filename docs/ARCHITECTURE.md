@@ -109,6 +109,12 @@ Para identificar productos se usa su **id** (`a[href='/product_details/5']`), no
 - Playwright espera a que los elementos sean accionables; `expect` reintenta hasta el timeout.
 - Donde hay animaciones (modal del carrito), se espera la **condición** (`to_be_hidden()`), no un tiempo.
 
+**Acciones AJAX: esperar la respuesta, no solo el efecto.** Agregar o quitar del carrito dispara
+un AJAX cuyo error el sitio ignora en silencio. `BasePage.click_expecting_ajax` registra
+`expect_response` antes del click y valida el status: un 5xx del backend (caso real en CI:
+`/delete_cart/1 → 503`) se reporta al instante como fallo de entorno en lugar de un timeout ambiguo.
+El test `test_remove_product_backend_failure_is_reported` lo verifica simulando el 503 con `page.route`.
+
 ### 3.8 Arrange por API, Act/Assert por UI
 - `registered_user` crea la cuenta vía API (~10x más rápido que el formulario).
 - Así el test de login no falla si se rompe el registro: cada test falla por **una** razón.

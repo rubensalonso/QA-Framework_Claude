@@ -32,6 +32,14 @@ el test fallido queda marcado con **"FALLO DE ENTORNO (no del producto)"** en el
 *Diagnóstico* de pytest-html y con el tag `fallo-de-entorno` en Allure. En CI suele resolverlo el
 reintento automático (`--reruns 1`); si persiste, reintentá más tarde.
 
+### `BackendUnavailableError: El backend falló (GET .../delete_cart/1 → HTTP 503)`
+
+Una acción de la UI (agregar o quitar del carrito) disparó una petición AJAX y el backend respondió
+5xx. El JavaScript del sitio **no maneja ese error**: la acción simplemente no ocurre y no se muestra
+ningún mensaje. El framework espera la respuesta de red de cada acción AJAX y falla al instante con
+el status exacto, en vez de esperar 10 s a que cambie algo que nunca va a cambiar.
+Es un fallo de entorno (queda marcado así en el reporte); el reintento de CI suele resolverlo.
+
 ### `Timeout ... waiting for locator(...)` / `element(s) not found`
 
 - ¿La página correcta cargó? Mirá el screenshot: puede haber un error del sitio o un overlay.

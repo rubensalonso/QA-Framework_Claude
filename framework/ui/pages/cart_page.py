@@ -76,7 +76,7 @@ class CartPage(BasePage):
             product_id: Id del producto a eliminar.
         """
         row = self.row(product_id)
-        row.locator(".cart_quantity_delete").click()
+        self.click_expecting_ajax(row.locator(".cart_quantity_delete"), f"/delete_cart/{product_id}")
         expect(row).to_be_hidden()
 
     @step("Proceder al checkout")

@@ -111,8 +111,10 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     allure.attach(screenshot, name="screenshot-on-failure", attachment_type=allure.attachment_type.PNG)
     allure.attach(page.url, name="url-on-failure", attachment_type=allure.attachment_type.URI_LIST)
 
-    # Triage automático: ¿falló el producto o el entorno? (WAF, hosting sobrecargado).
+    # Triage automático: ¿falló el producto o el entorno? (WAF, hosting sobrecargado, backend 5xx).
     environment_issue = site_unavailability_reason(page)
+    if environment_issue is None and call.excinfo is not None and call.excinfo.errisinstance(SiteUnavailableError):
+        environment_issue = str(call.excinfo.value)
     if environment_issue:
         diagnosis = f"FALLO DE ENTORNO (no del producto): {environment_issue}"
         logger.warning("%s → %s", item.nodeid, diagnosis)

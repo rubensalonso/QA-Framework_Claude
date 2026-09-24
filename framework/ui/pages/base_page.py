@@ -26,7 +26,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from framework.core.logger import get_logger
 from framework.core.step import step
-from framework.ui.browser_setup import SiteUnavailableError, site_unavailability_reason
+from framework.ui.browser_setup import BackendUnavailableError, SiteUnavailableError, site_unavailability_reason
 from framework.ui.components.header import Header
 from framework.ui.components.subscription import SubscriptionFooter
 
@@ -96,6 +96,34 @@ class BasePage(ABC):
     def title(self) -> str:
         """Título del documento (``<title>``)."""
         return self.page.title()
+
+    def click_expecting_ajax(self, target: Locator, url_fragment: str) -> None:
+        """Hace click y espera la respuesta AJAX que ese click dispara, validando su status.
+
+        Decisión de diseño: esperar la *respuesta de red* además del efecto visual convierte un
+        timeout ambiguo de 10 s en un diagnóstico inmediato y preciso cuando el backend falla.
+        ``expect_response`` se registra *antes* del click para no perder respuestas rápidas.
+
+        Args:
+            target: Elemento a clickear.
+            url_fragment: Parte de la URL de la petición esperada (``"/delete_cart/"``).
+
+        Raises:
+            BackendUnavailableError: Si el backend respondió 5xx (fallo de entorno).
+            AssertionError: Si respondió otro status de error (posible bug del producto).
+        """
+        with self.page.expect_response(lambda r: url_fragment in r.url) as response_info:
+            target.click()
+        response = response_info.value
+        if response.ok:
+            return
+        detail = f"{response.request.method} {response.url} → HTTP {response.status}"
+        if response.status >= 500:
+            raise BackendUnavailableError(
+                f"El backend falló ({detail}). El sitio no muestra el error en la UI: la acción "
+                "simplemente no ocurre. Fallo de entorno, no del producto."
+            )
+        raise AssertionError(f"La acción AJAX respondió con error ({detail}): posible bug del producto")
 
     @step("Scroll hasta el final de la página")
     def scroll_to_bottom(self) -> None:

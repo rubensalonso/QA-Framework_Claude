@@ -65,6 +65,16 @@ OVERLOAD_MARKERS: tuple[str, ...] = (
 )
 
 
+class BackendUnavailableError(SiteUnavailableError):
+    """Una petición AJAX disparada por la UI recibió un 5xx del backend.
+
+    Caso real observado en CI: ``GET /delete_cart/1 → 503``. El JavaScript del sitio no maneja
+    el error (solo actúa en ``success``), así que la UI no cambia ni avisa nada. Sin esta
+    detección, el test esperaba el timeout completo y fallaba con un "expected to be hidden"
+    que no explicaba la causa. Hereda de :class:`SiteUnavailableError`: es un fallo de entorno.
+    """
+
+
 def is_bot_challenge(title: str) -> bool:
     """Indica si un título de página corresponde a una verificación anti-bot.
 
