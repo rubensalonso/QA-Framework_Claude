@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 
 from playwright.sync_api import BrowserContext, Page, Route
+from playwright.sync_api import Error as PlaywrightError
 
 from framework.core.logger import get_logger
 
@@ -56,6 +57,14 @@ class SiteUnavailableError(AssertionError):
     """
 
 
+# Textos de la página de sobrecarga del hosting (observada en CI: "under heavy load (queue full)").
+# No tiene un título distintivo, por eso se detecta por el contenido.
+OVERLOAD_MARKERS: tuple[str, ...] = (
+    "under heavy load",
+    "too many people are accessing this website",
+)
+
+
 def is_bot_challenge(title: str) -> bool:
     """Indica si un título de página corresponde a una verificación anti-bot.
 
@@ -63,6 +72,31 @@ def is_bot_challenge(title: str) -> bool:
         title: Título del documento HTML.
     """
     return any(marker.lower() in title.lower() for marker in BOT_CHALLENGE_MARKERS)
+
+
+def site_unavailability_reason(page: Page) -> str | None:
+    """Diagnostica si la página actual es un muro del entorno en vez del contenido del sitio.
+
+    Se usa al fallar un test para separar **fallos de entorno** (WAF, sobrecarga del hosting)
+    de **fallos de producto**, que es lo primero que hay que saber al hacer triage.
+
+    Args:
+        page: Página a inspeccionar.
+
+    Returns:
+        Descripción del problema, o ``None`` si la página parece contenido real.
+    """
+    try:
+        title = page.title()
+        if is_bot_challenge(title):
+            return f"verificación anti-bot / bloqueo del WAF ('{title}')"
+        # Solo el comienzo del body: las páginas de error son cortas y así se evita leer el DOM entero.
+        body = page.evaluate("() => (document.body ? document.body.innerText : '').slice(0, 1000)").lower()
+    except PlaywrightError:  # página cerrada o navegando: no hay diagnóstico posible
+        return None
+    if any(marker in body for marker in OVERLOAD_MARKERS):
+        return "el hosting respondió que está sobrecargado ('under heavy load')"
+    return None
 
 
 def _abort_route(route: Route) -> None:

@@ -1,6 +1,6 @@
 # Catálogo de casos de prueba
 
-**168 tests** en total (cada combinación parametrizada cuenta como uno): 40 unit · 50 API · 64 UI · 14 performance.
+**171 tests** en total (cada combinación parametrizada cuenta como uno): 43 unit · 50 API · 64 UI · 14 performance.
 Regenerar el listado: `pytest --collect-only -q`.
 
 Leyenda de tipo: ✅ positivo · ❌ negativo / borde · 🔒 seguridad · 🔁 E2E
@@ -157,5 +157,5 @@ APIs oficiales 1–14: todas cubiertas en `tests/api/` (ver secciones siguientes
 
 ## Unit — `tests/unit/`
 
-40 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
-y en `repr`, unicidad e inmutabilidad de factories, patrón de bloqueo de ads y detección de muros anti-bot.
+43 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
+y en `repr`, unicidad e inmutabilidad de factories, patrón de bloqueo de ads y diagnóstico de fallos de entorno (muros anti-bot, sobrecarga del hosting).

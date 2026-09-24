@@ -16,7 +16,7 @@ from framework.core.step import _render_title
 from framework.data import PaymentCardFactory, UserFactory
 from framework.data.models import SUPPORTED_COUNTRIES
 from framework.performance.stats import percentile, summarize
-from framework.ui.browser_setup import AD_DOMAINS_PATTERN, is_bot_challenge
+from framework.ui.browser_setup import AD_DOMAINS_PATTERN, is_bot_challenge, site_unavailability_reason
 from framework.utils.parsing import parse_price
 
 pytestmark = pytest.mark.unit
@@ -154,3 +154,39 @@ class TestBrowserSetup:
 
     def test_real_title_is_not_a_challenge(self):
         assert not is_bot_challenge("Automation Exercise - Signup / Login")
+
+
+class _FakePage:
+    """Doble de prueba mínimo de ``Page``: solo lo que usa ``site_unavailability_reason``."""
+
+    def __init__(self, title: str, body: str) -> None:
+        self._title, self._body = title, body
+
+    def title(self) -> str:
+        return self._title
+
+    def evaluate(self, _script: str) -> str:
+        return self._body
+
+
+class TestSiteUnavailabilityDiagnosis:
+    @pytest.mark.parametrize(
+        ("title", "body", "expected"),
+        [
+            pytest.param("403 Forbidden", "", "WAF", id="waf-block"),
+            pytest.param(
+                "Automation Exercise",
+                "This website is under heavy load (queue full). We're sorry, too many people...",
+                "sobrecargado",
+                id="hosting-overload",
+            ),
+        ],
+    )
+    def test_detects_environment_failures(self, title, body, expected):
+        reason = site_unavailability_reason(_FakePage(title, body))  # type: ignore[arg-type]
+        assert reason is not None
+        assert expected in reason
+
+    def test_real_page_has_no_diagnosis(self):
+        page = _FakePage("Automation Exercise", "Full-Fledged practice website for Automation Engineers")
+        assert site_unavailability_reason(page) is None  # type: ignore[arg-type]

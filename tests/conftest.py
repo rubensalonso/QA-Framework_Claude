@@ -38,6 +38,7 @@ from framework.ui.browser_setup import (
     block_third_party_ads,
     is_bot_challenge,
     register_overlay_handlers,
+    site_unavailability_reason,
 )
 
 logger = get_logger("conftest")
@@ -110,11 +111,22 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     allure.attach(screenshot, name="screenshot-on-failure", attachment_type=allure.attachment_type.PNG)
     allure.attach(page.url, name="url-on-failure", attachment_type=allure.attachment_type.URI_LIST)
 
+    # Triage automático: ¿falló el producto o el entorno? (WAF, hosting sobrecargado).
+    environment_issue = site_unavailability_reason(page)
+    if environment_issue:
+        diagnosis = f"FALLO DE ENTORNO (no del producto): {environment_issue}"
+        logger.warning("%s → %s", item.nodeid, diagnosis)
+        allure.attach(diagnosis, name="diagnóstico", attachment_type=allure.attachment_type.TEXT)
+        allure.dynamic.tag("fallo-de-entorno")
+        report.sections.append(("Diagnóstico", diagnosis))
+
     html_plugin = item.config.pluginmanager.getplugin("html")
     if html_plugin is not None:
         extras = getattr(report, "extras", [])
         extras.append(html_plugin.extras.png(base64.b64encode(screenshot).decode(), name="Screenshot"))
         extras.append(html_plugin.extras.url(page.url, name="URL al fallar"))
+        if environment_issue:
+            extras.append(html_plugin.extras.text(diagnosis, name="Diagnóstico"))
         report.extras = extras
 
 

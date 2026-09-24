@@ -1,5 +1,7 @@
 # QA Automation Framework — AutomationExercise
 
+[![tests](https://github.com/rubensalonso/QA-Framework_Claude/actions/workflows/tests.yml/badge.svg)](https://github.com/rubensalonso/QA-Framework_Claude/actions/workflows/tests.yml)
+
 Framework de automatización **UI + API + Performance** construido con **Python, Pytest y Playwright**,
 usando como sistema bajo prueba (SUT) el sitio público de práctica
 [automationexercise.com](https://automationexercise.com).
@@ -52,7 +54,7 @@ AutomationExercise ganó porque **un solo sitio cubre las tres capas** que un fr
 
 | Suite | Cantidad* | Qué valida |
 |---|---|---|
-| `tests/unit` | 40 | El propio framework: parseo, percentiles, enmascarado de secretos, factories |
+| `tests/unit` | 43 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno |
 | `tests/api` | 50 | Contratos (Pydantic), códigos de negocio, CRUD de cuentas, métodos no soportados, inyección |
 | `tests/ui` | 64 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
 | `tests/performance` | 14 | Navigation Timing, Core Web Vitals (LCP/CLS), SLA de latencia p95 de API |
@@ -132,7 +134,7 @@ QA-Framework_Claude/
 ### Windows (PowerShell)
 
 ```powershell
-git clone <url-del-repo>
+git clone https://github.com/rubensalonso/QA-Framework_Claude.git
 cd QA-Framework_Claude
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -144,7 +146,7 @@ copy .env.example .env      # opcional: solo si querés cambiar valores por defe
 ### Linux / macOS
 
 ```bash
-git clone <url-del-repo>
+git clone https://github.com/rubensalonso/QA-Framework_Claude.git
 cd QA-Framework_Claude
 python -m venv .venv
 source .venv/bin/activate

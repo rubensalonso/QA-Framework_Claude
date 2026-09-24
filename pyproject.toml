@@ -46,6 +46,12 @@ log_cli_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 log_cli_date_format = "%H:%M:%S"
 # pytest-timeout: un test que tarda más de esto está colgado; mejor fallar que bloquear el pipeline.
 timeout = 300
+filterwarnings = [
+    # Con xdist, pytest-html re-procesa los screenshots ya convertidos a data-URI y emite este
+    # warning con la imagen completa en base64 (decenas de KB), tapando el resumen en CI.
+    # Es benigno: la imagen se embebe igual. Se ignora solo este mensaje puntual.
+    "ignore:Self-contained HTML report includes link to external resource:UserWarning",
+]
 
 # ---------------------------------------------------------------------------
 # Ruff (linter + formatter)

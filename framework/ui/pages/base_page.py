@@ -26,7 +26,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from framework.core.logger import get_logger
 from framework.core.step import step
-from framework.ui.browser_setup import SiteUnavailableError, is_bot_challenge
+from framework.ui.browser_setup import SiteUnavailableError, site_unavailability_reason
 from framework.ui.components.header import Header
 from framework.ui.components.subscription import SubscriptionFooter
 
@@ -83,11 +83,11 @@ class BasePage(ABC):
         except AssertionError as exc:
             # Diagnóstico explícito: sin esto, un bloqueo anti-bot se vería como "element not found"
             # y alguien perdería tiempo buscando un locator roto que en realidad está bien.
-            if is_bot_challenge(self.page.title()):
+            reason = site_unavailability_reason(self.page)
+            if reason:
                 raise SiteUnavailableError(
-                    f"{self.__class__.__name__}: el sitio mostró una verificación anti-bot "
-                    f"('{self.page.title()}') en lugar del contenido. Suele deberse a demasiadas "
-                    "peticiones desde la misma IP: reducir el paralelismo (-n) y reintentar más tarde."
+                    f"{self.__class__.__name__}: en lugar del contenido, {reason}. Es un problema del "
+                    "entorno, no del producto: reducir el paralelismo (-n) y reintentar más tarde."
                 ) from exc
             raise
         return self

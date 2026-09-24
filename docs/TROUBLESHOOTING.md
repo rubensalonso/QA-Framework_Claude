@@ -25,6 +25,13 @@ navegador normal, no es un problema del framework.
 - Probá desde otra red.
 - **No** intentes evadirlo (user agents falsos, plugins "stealth", etc.): es un sitio ajeno y compartido.
 
+### "This website is under heavy load (queue full)"
+
+El hosting del sitio está saturado (le pasa también a usuarios reales). El framework lo detecta:
+el test fallido queda marcado con **"FALLO DE ENTORNO (no del producto)"** en el log, en la sección
+*Diagnóstico* de pytest-html y con el tag `fallo-de-entorno` en Allure. En CI suele resolverlo el
+reintento automático (`--reruns 1`); si persiste, reintentá más tarde.
+
 ### `Timeout ... waiting for locator(...)` / `element(s) not found`
 
 - ¿La página correcta cargó? Mirá el screenshot: puede haber un error del sitio o un overlay.
