@@ -51,6 +51,11 @@ class Settings(BaseSettings):
 
     # --- Navegador ---
     block_ads: bool = True
+    # Reintentos de una acción AJAX de la UI cuando el backend responde 5xx (ver
+    # BasePage.click_expecting_ajax). 0 = desactivado. Tope bajo: es un parche contra la
+    # inestabilidad del sitio público, no una forma de esconder errores.
+    ui_ajax_retries: int = Field(default=1, ge=0, le=3)
+    ui_ajax_retry_backoff_ms: int = Field(default=1_000, ge=0)
     viewport_width: int = 1366
     viewport_height: int = 768
     locale: str = "en-US"

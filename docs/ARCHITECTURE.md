@@ -112,8 +112,11 @@ Para identificar productos se usa su **id** (`a[href='/product_details/5']`), no
 **Acciones AJAX: esperar la respuesta, no solo el efecto.** Agregar o quitar del carrito dispara
 un AJAX cuyo error el sitio ignora en silencio. `BasePage.click_expecting_ajax` registra
 `expect_response` antes del click y valida el status: un 5xx del backend (caso real en CI:
-`/delete_cart/1 → 503`) se reporta al instante como fallo de entorno en lugar de un timeout ambiguo.
-El test `test_remove_product_backend_failure_is_reported` lo verifica simulando el 503 con `page.route`.
+`/delete_cart/1 → 503`) se reintenta una vez, como haría un usuario, y cada reintento se emite como
+`EnvironmentInstabilityWarning` para que la inestabilidad siga visible en el resumen de pytest. Si
+persiste, se reporta como fallo de entorno en lugar de un timeout ambiguo.
+Dos tests lo verifican simulando el backend con `page.route`: 503 persistente
+(`test_remove_product_backend_failure_is_reported`) y 503 transitorio (`test_transient_backend_failure_is_retried`).
 
 ### 3.8 Arrange por API, Act/Assert por UI
 - `registered_user` crea la cuenta vía API (~10x más rápido que el formulario).

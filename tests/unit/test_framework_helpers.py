@@ -180,6 +180,7 @@ class TestSiteUnavailabilityDiagnosis:
                 "sobrecargado",
                 id="hosting-overload",
             ),
+            pytest.param("", "   ", "página vacía", id="empty-403-page"),
         ],
     )
     def test_detects_environment_failures(self, title, body, expected):

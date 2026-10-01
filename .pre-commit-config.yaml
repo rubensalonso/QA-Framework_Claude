@@ -1,0 +1,59 @@
+# Hooks de calidad que corren automáticamente antes de cada commit (y algunos antes de cada push).
+# Instalación (una sola vez por clon):  pre-commit install --hook-type pre-commit --hook-type pre-push
+# Ejecución manual sobre todo el repo:  pre-commit run --all-files
+#
+# Decisión de diseño: ruff, mypy y pytest corren como hooks `local` con `language: system`, es decir,
+# usando las versiones del entorno virtual (fijadas en requirements-dev.txt). Así el hook y el CI usan
+# EXACTAMENTE la misma versión de cada herramienta: no puede pasar que el hook apruebe algo que el CI
+# rechaza (o al revés) por una diferencia de versión. Requiere tener el venv activado al commitear.
+
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  # Higiene general de archivos (sin dependencias del proyecto).
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]                  # coherente con .gitattributes
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]               # evita commitear traces, videos o reportes por error
+      - id: detect-private-key            # red de seguridad contra credenciales commiteadas
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format
+        language: system
+        types: [python]
+
+      - id: ruff-check
+        name: ruff check (con autofix)
+        entry: ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: mypy (strict)
+        # Se ejecuta sobre los paquetes completos y no archivo por archivo: el tipado estricto
+        # necesita ver todo el grafo de imports para ser correcto.
+        entry: mypy framework performance scripts
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: unit-tests
+        name: tests unitarios del framework
+        # pre-push y no pre-commit: tarda ~1 s, pero no hace falta en cada commit intermedio.
+        entry: pytest -m unit -q -p no:cacheprovider --no-header -o addopts=""
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

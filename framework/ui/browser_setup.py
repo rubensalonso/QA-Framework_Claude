@@ -75,6 +75,14 @@ class BackendUnavailableError(SiteUnavailableError):
     """
 
 
+class EnvironmentInstabilityWarning(UserWarning):
+    """Un fallo transitorio del entorno se recuperó con un reintento.
+
+    Se emite como *warning* de pytest para que aparezca en el resumen de la corrida aunque el test
+    pase: la inestabilidad queda visible y medible en vez de esconderse detrás de un verde.
+    """
+
+
 def is_bot_challenge(title: str) -> bool:
     """Indica si un título de página corresponde a una verificación anti-bot.
 
@@ -106,6 +114,9 @@ def site_unavailability_reason(page: Page) -> str | None:
         return None
     if any(marker in body for marker in OVERLOAD_MARKERS):
         return "el hosting respondió que está sobrecargado ('under heavy load')"
+    if not title.strip() and not body.strip():
+        # Observado: el WAF bloquea con un 403 de body vacío. Ninguna página real del sitio está vacía.
+        return "el sitio devolvió una página vacía (típico de un bloqueo 403 del WAF)"
     return None
 
 

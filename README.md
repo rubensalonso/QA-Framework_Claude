@@ -54,9 +54,9 @@ AutomationExercise ganó porque **un solo sitio cubre las tres capas** que un fr
 
 | Suite | Cantidad* | Qué valida |
 |---|---|---|
-| `tests/unit` | 43 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno |
+| `tests/unit` | 44 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno |
 | `tests/api` | 50 | Contratos (Pydantic), códigos de negocio, CRUD de cuentas, métodos no soportados, inyección |
-| `tests/ui` | 65 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
+| `tests/ui` | 66 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
 | `tests/performance` | 14 | Navigation Timing, Core Web Vitals (LCP/CLS), SLA de latencia p95 de API |
 | `performance/load` | — | Prueba de carga con Locust (con topes de seguridad incorporados) |
 
@@ -120,9 +120,13 @@ QA-Framework_Claude/
 ├── test_data/                    # Datos estáticos para tests data-driven
 ├── docs/                         # Documentación ampliada
 ├── .github/workflows/tests.yml   # Pipeline de CI
+├── scripts/compile_requirements.py  # Regenera/verifica los locks de dependencias
+├── .pre-commit-config.yaml       # Hooks de calidad (local y CI)
 ├── pyproject.toml                # Config de pytest, ruff y mypy
-├── requirements.txt              # Dependencias de ejecución
-└── requirements-dev.txt          # + herramientas de calidad
+├── requirements.in               # Dependencias directas (se editan a mano)
+├── requirements.txt              # Lock generado (versiones exactas)
+├── requirements-dev.in           # + herramientas de calidad
+└── requirements-dev.txt          # Lock generado de desarrollo
 ```
 
 ---
@@ -140,6 +144,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 playwright install chromium firefox
+pre-commit install          # hooks de calidad antes de cada commit/push
 copy .env.example .env      # opcional: solo si querés cambiar valores por defecto
 ```
 
@@ -152,6 +157,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 playwright install --with-deps chromium firefox
+pre-commit install
 cp .env.example .env
 ```
 
@@ -248,6 +254,7 @@ sobreescribe con variables de entorno con prefijo `QA_` o con un archivo `.env`
 | `QA_EXPECT_TIMEOUT_MS` | `10000` | Timeout de aserciones `expect` |
 | `QA_API_MAX_RETRIES` | `2` | Reintentos ante errores transitorios (solo métodos idempotentes) |
 | `QA_BLOCK_ADS` | `true` | Bloquear publicidad de terceros |
+| `QA_UI_AJAX_RETRIES` | `1` | Reintentos de una acción AJAX ante un 5xx del backend (cada uno queda como warning) |
 | `QA_FAKER_SEED` | — | Semilla para datos reproducibles |
 | `QA_LOG_LEVEL` | `INFO` | Nivel de log |
 | `QA_PERF_*` | ver `.env.example` | Presupuestos de performance |
@@ -262,7 +269,7 @@ Los valores se validan al arrancar: `QA_DEFAULT_TIMEOUT_MS=abc` falla de inmedia
 
 | Evento | Qué corre |
 |---|---|
-| Pull request | Lint + mypy + unit → API → UI smoke (Chromium) |
+| Pull request | Lock al día + pre-commit (ruff, mypy) + unit → API → UI smoke (Chromium) |
 | Push a `main` | Todo lo anterior + UI regresión en Chromium y Firefox |
 | Nightly (L-V) | Regresión completa + performance + carga |
 | Manual | Marker y navegador a elección |
@@ -301,4 +308,5 @@ de red. Ver [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 | [`docs/WRITING_TESTS.md`](docs/WRITING_TESTS.md) | Guía paso a paso para agregar páginas, endpoints y tests + convenciones |
 | [`docs/TEST_CATALOG.md`](docs/TEST_CATALOG.md) | Catálogo de casos de prueba y trazabilidad con los test cases del sitio |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Estrategia de performance: web vitals, SLA de API y carga |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Lock de dependencias, Dependabot y pre-commit |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Problemas frecuentes y cómo diagnosticarlos |

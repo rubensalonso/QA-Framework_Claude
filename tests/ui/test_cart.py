@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import allure
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Route, expect
 
 from framework.api import AutomationExerciseApi
 from framework.api.schemas import ProductsResponse
 from framework.data import User
-from framework.ui.browser_setup import BackendUnavailableError
+from framework.ui.browser_setup import BackendUnavailableError, EnvironmentInstabilityWarning
 from framework.ui.pages import CartPage, HomePage, LoginPage, ProductDetailPage, ProductsPage
 
 pytestmark = [pytest.mark.ui, pytest.mark.regression]
@@ -92,7 +92,7 @@ class TestCart:
         assert [i.product_id for i in cart.items()] == [2]
 
     @pytest.mark.negative
-    @allure.title("Si el backend falla al borrar (503), el framework lo reporta al instante")
+    @allure.title("Si el backend falla persistentemente al borrar (503), el framework lo reporta con precisión")
     def test_remove_product_backend_failure_is_reported(self, page: Page):
         # Reproduce de forma determinística un 503 real observado en CI, simulando el backend
         # con page.route (mock de red): no depende de que el sitio falle de verdad.
@@ -100,11 +100,33 @@ class TestCart:
         cart = CartPage(page).open()
         page.route("**/delete_cart/**", lambda route: route.fulfill(status=503, body="Service Unavailable"))
 
-        with pytest.raises(BackendUnavailableError, match="HTTP 503"):
+        # Se reintenta (y se avisa con un warning), pero ante un fallo persistente termina en error claro.
+        with pytest.warns(EnvironmentInstabilityWarning), pytest.raises(BackendUnavailableError, match="HTTP 503"):
             cart.remove_product(1)
 
         # Defecto del SUT documentado: ante el error, la fila sigue y la UI no muestra ningún mensaje.
         expect(cart.row(1)).to_be_visible()
+
+    @pytest.mark.negative
+    @allure.title("Un 503 transitorio se recupera con un reintento y queda registrado como warning")
+    def test_transient_backend_failure_is_retried(self, page: Page):
+        ProductsPage(page).open().add_to_cart(1)
+        cart = CartPage(page).open()
+        failures_left = [1]  # lista mutable: el handler de la ruta necesita modificar el contador
+
+        def _fail_once(route: Route) -> None:
+            if failures_left[0] > 0:
+                failures_left[0] -= 1
+                route.fulfill(status=503, body="Service Unavailable")
+            else:
+                route.continue_()  # a partir del segundo intento, llega al backend real
+
+        page.route("**/delete_cart/**", _fail_once)
+
+        with pytest.warns(EnvironmentInstabilityWarning, match="intento 1/2"):
+            cart.remove_product(1)
+
+        cart.should_be_empty()
 
     @pytest.mark.negative
     @allure.title("Carrito vacío muestra el mensaje correspondiente")

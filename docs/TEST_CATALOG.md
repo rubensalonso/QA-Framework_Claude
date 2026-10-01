@@ -1,6 +1,6 @@
 # Catálogo de casos de prueba
 
-**172 tests** en total (cada combinación parametrizada cuenta como uno): 43 unit · 50 API · 65 UI · 14 performance.
+**174 tests** en total (cada combinación parametrizada cuenta como uno): 44 unit · 50 API · 66 UI · 14 performance.
 Regenerar el listado: `pytest --collect-only -q`.
 
 Leyenda de tipo: ✅ positivo · ❌ negativo / borde · 🔒 seguridad · 🔁 E2E
@@ -119,7 +119,8 @@ APIs oficiales 1–14: todas cubiertas en `tests/api/` (ver secciones siguientes
 | `test_quantity_boundaries` ×2 | ❌ | Valores límite 1 y 99 |
 | `test_remove_product_empties_cart` | ✅ | TC17 |
 | `test_remove_one_of_many` | ❌ | Borrado parcial |
-| `test_remove_product_backend_failure_is_reported` | ❌ | Backend 503 simulado con `page.route`: error inmediato y preciso (documenta que la UI no avisa) |
+| `test_remove_product_backend_failure_is_reported` | ❌ | Backend 503 persistente (mock con `page.route`): reintenta, avisa y falla con error preciso (documenta que la UI no avisa) |
+| `test_transient_backend_failure_is_retried` | ❌ | Backend 503 transitorio (mock): se recupera con un reintento y lo registra como warning |
 | `test_empty_cart_message` | ❌ | Estado vacío |
 | `test_guest_checkout_requires_login` | ❌ | Modal de login para invitados |
 | `test_cart_persists_after_login` | 🔁 | TC20 |
@@ -158,5 +159,5 @@ APIs oficiales 1–14: todas cubiertas en `tests/api/` (ver secciones siguientes
 
 ## Unit — `tests/unit/`
 
-43 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
+44 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
 y en `repr`, unicidad e inmutabilidad de factories, patrón de bloqueo de ads y diagnóstico de fallos de entorno (muros anti-bot, sobrecarga del hosting).

@@ -181,16 +181,19 @@ def site_available(browser: Browser, base_url: str, settings: Settings) -> None:
         if settings.block_ads:
             block_third_party_ads(context)
         probe = context.new_page()
-        probe.goto(base_url, wait_until="domcontentloaded", timeout=settings.navigation_timeout_ms)
+        response = probe.goto(base_url, wait_until="domcontentloaded", timeout=settings.navigation_timeout_ms)
+        status = response.status if response is not None else None
         title = probe.title()
     finally:
         context.close()
+    advice = "El framework no evade bloqueos: esperá, reducí el paralelismo (-n 2) o usá otra red/entorno."
+    # Se valida el status además del título: el WAF también bloquea con un 403 de body vacío y sin
+    # título (observado), que una verificación basada solo en el título dejaba pasar.
+    if status is None or status >= 400:
+        raise SiteUnavailableError(f"{base_url} respondió HTTP {status} ('{title}'). {advice}")
     if is_bot_challenge(title):
-        raise SiteUnavailableError(
-            f"{base_url} responde con una verificación anti-bot ('{title}'). El framework no la evade: "
-            "esperá unos minutos, reducí el paralelismo (-n 2) o usá otra red/entorno."
-        )
-    logger.info("Chequeo de disponibilidad OK: '%s'", title)
+        raise SiteUnavailableError(f"{base_url} responde con una verificación anti-bot ('{title}'). {advice}")
+    logger.info("Chequeo de disponibilidad OK: HTTP %s '%s'", status, title)
 
 
 @pytest.fixture

@@ -146,4 +146,5 @@ Cada caso del JSON debe tener un `id` único y descriptivo: es lo que aparece en
 - Type hints en todo el código de `framework/` (mypy estricto lo valida).
 - Docstrings estilo Google en clases y métodos públicos del framework.
 - Comentarios que explican **por qué**, no qué (el código ya dice qué).
-- Antes de subir cambios: `ruff check . && ruff format . && mypy framework performance && pytest -m unit`.
+- Los hooks de pre-commit validan formato, lint y tipado en cada commit, y los tests unitarios en cada push
+  (instalación: `pre-commit install`; ver [DEPENDENCIES.md](DEPENDENCIES.md)).

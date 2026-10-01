@@ -27,6 +27,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Runner fijado (no ubuntu-latest): el 19/10/2026 "latest" pasa a Ubuntu 26 y podría romper
+  # `playwright install --with-deps`. Migrar a propósito, en un PR propio, no por sorpresa.
   PYTHON_VERSION: "3.12"
   # Paralelismo BAJO a propósito: el SUT es un sitio público con WAF que bloquea ráfagas.
   XDIST_WORKERS: "2"
@@ -34,30 +36,39 @@ env:
 jobs:
   lint:
     name: Lint, tipado y unit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements*.txt
       - run: pip install -r requirements-dev.txt
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy framework performance
+      - name: Lockfiles al día con los .in
+        run: python scripts/compile_requirements.py --check
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      # Los mismos hooks que corren localmente antes de cada commit (ruff, mypy, higiene de archivos):
+      # una única definición de "código válido" para la máquina del desarrollador y el CI.
+      - name: Hooks de pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure
       - name: Tests unitarios del framework
         run: pytest -m unit
 
   api:
     name: API
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements*.txt
       - run: pip install -r requirements.txt
       # La suite API usa Playwright solo como cliente HTTP: no necesita navegadores.
       - name: Ejecutar tests de API
@@ -79,7 +90,7 @@ jobs:
   ui:
     name: UI (${{ matrix.browser }})
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false   # que un navegador falle no cancela el otro: queremos ver ambos resultados
       # Un navegador a la vez: en paralelo serían 4 navegadores contra un sitio público, y en la
@@ -97,6 +108,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements*.txt
       - run: pip install -r requirements.txt
       - run: playwright install --with-deps ${{ matrix.browser }}
       - name: Elegir suite
@@ -131,13 +143,14 @@ jobs:
     name: Performance
     needs: [api, ui]
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: requirements*.txt
       - run: pip install -r requirements.txt
       - run: playwright install --with-deps chromium
       # Secuencial (sin -n): el paralelismo distorsiona las mediciones de tiempo.
@@ -156,7 +169,7 @@ jobs:
     name: Reporte Allure
     needs: [api, ui]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8
         with:

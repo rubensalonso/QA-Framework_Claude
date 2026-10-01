@@ -1,0 +1,44 @@
+# Dependabot: abre PRs automáticos para mantener las dependencias al día.
+# Cada PR dispara el CI completo, que actúa como red de seguridad antes de mergear.
+# Ver docs/DEPENDENCIES.md para el flujo de revisión.
+version: 2
+
+updates:
+  # Paquetes de Python (requirements.in / requirements*.txt).
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels: [dependencies, python]
+    groups:
+      # Parches y minors de herramientas de desarrollo en un único PR: bajo riesgo, poco ruido.
+      dev-tools:
+        patterns: ["ruff", "mypy", "pre-commit", "uv"]
+        update-types: [minor, patch]
+      # Plugins de pytest juntos: suelen moverse en conjunto con pytest.
+      pytest-plugins:
+        patterns: ["pytest*", "allure-pytest"]
+        update-types: [minor, patch]
+      # Playwright va SOLO en su propio PR: cada versión trae navegadores nuevos y es la
+      # dependencia con más impacto sobre los tests de UI.
+
+  # Versiones de las actions usadas en .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    commit-message:
+      prefix: "ci"
+    labels: [dependencies, ci]
+    groups:
+      github-actions:
+        patterns: ["*"]

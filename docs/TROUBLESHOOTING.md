@@ -13,7 +13,7 @@ Ante cualquier fallo de UI, en este orden:
 
 ## Problemas frecuentes
 
-### `SiteUnavailableError: ... verificación anti-bot` o "403 Forbidden"
+### `SiteUnavailableError: ... respondió HTTP 403`, verificación anti-bot o "403 Forbidden"
 
 El WAF del sitio (Cloudflare / Imunify360) bloqueó tu IP por exceso de tráfico. Afecta también a tu
 navegador normal, no es un problema del framework.
@@ -38,7 +38,10 @@ Una acción de la UI (agregar o quitar del carrito) disparó una petición AJAX 
 5xx. El JavaScript del sitio **no maneja ese error**: la acción simplemente no ocurre y no se muestra
 ningún mensaje. El framework espera la respuesta de red de cada acción AJAX y falla al instante con
 el status exacto, en vez de esperar 10 s a que cambie algo que nunca va a cambiar.
-Es un fallo de entorno (queda marcado así en el reporte); el reintento de CI suele resolverlo.
+Antes de fallar, el framework reintenta la acción (`QA_UI_AJAX_RETRIES`, 1 por defecto), como
+haría un usuario. Cada reintento queda registrado como `EnvironmentInstabilityWarning` en el resumen
+de pytest: si ves muchos, el backend está inestable aunque los tests pasen. Si el error persiste
+tras los reintentos, es un fallo de entorno (queda marcado así en el reporte).
 
 ### `Timeout ... waiting for locator(...)` / `element(s) not found`
 

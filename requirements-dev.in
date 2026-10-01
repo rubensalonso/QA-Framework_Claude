@@ -1,0 +1,10 @@
+# Herramientas de desarrollo y calidad de código.
+# -c fija las dependencias compartidas a las MISMAS versiones que requirements.txt,
+# así desarrollo y ejecución nunca divergen.
+-c requirements.txt
+-r requirements.in
+
+ruff>=0.6
+mypy>=1.11
+uv>=0.8             # uv pip compile --universal: regenera los .txt a partir de los .in
+pre-commit>=4.0     # hooks de calidad antes de cada commit

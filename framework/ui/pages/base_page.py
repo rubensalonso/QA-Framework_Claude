@@ -8,9 +8,11 @@ Decisiones de diseño:
   destino ya verificada (``SignupPage.submit() -> AccountCreatedPage``), así el IDE guía el
   flujo y el test se lee como una historia. Si el destino depende del resultado (``login``
   válido o inválido), el método no devuelve nada y el test decide qué página verificar.
-* **Sin esperas manuales**: ni ``time.sleep`` ni ``wait_for_timeout``. Playwright espera
-  automáticamente a que los elementos sean accionables, y ``expect`` reintenta las aserciones
-  hasta el timeout. Las "esperas" de este framework son siempre condiciones explícitas.
+* **Sin esperas manuales**: ni ``time.sleep`` ni ``wait_for_timeout`` para esperar la UI.
+  Playwright espera automáticamente a que los elementos sean accionables, y ``expect`` reintenta
+  las aserciones hasta el timeout. Las esperas de la UI son siempre condiciones explícitas.
+  Única excepción deliberada: la pausa antes de reintentar una acción AJAX que recibió un 5xx
+  (``click_expecting_ajax``), que no espera a la UI sino que da aire a un backend saturado.
 * **Aserciones de carga**: cada página define ``loaded_indicator``; ``open()`` y las
   transiciones verifican que la página correcta realmente cargó antes de seguir.
 """
@@ -18,15 +20,23 @@ Decisiones de diseño:
 from __future__ import annotations
 
 import re
+import warnings
 from abc import ABC, abstractmethod
 from typing import ClassVar, Self
 
+import allure
 from playwright.sync_api import Locator, Page, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+from framework.config import get_settings
 from framework.core.logger import get_logger
 from framework.core.step import step
-from framework.ui.browser_setup import BackendUnavailableError, SiteUnavailableError, site_unavailability_reason
+from framework.ui.browser_setup import (
+    BackendUnavailableError,
+    EnvironmentInstabilityWarning,
+    SiteUnavailableError,
+    site_unavailability_reason,
+)
 from framework.ui.components.header import Header
 from framework.ui.components.subscription import SubscriptionFooter
 
@@ -100,30 +110,49 @@ class BasePage(ABC):
     def click_expecting_ajax(self, target: Locator, url_fragment: str) -> None:
         """Hace click y espera la respuesta AJAX que ese click dispara, validando su status.
 
-        Decisión de diseño: esperar la *respuesta de red* además del efecto visual convierte un
-        timeout ambiguo de 10 s en un diagnóstico inmediato y preciso cuando el backend falla.
-        ``expect_response`` se registra *antes* del click para no perder respuestas rápidas.
+        Decisiones de diseño:
+
+        * Esperar la *respuesta de red* además del efecto visual convierte un timeout ambiguo de
+          10 s en un diagnóstico inmediato y preciso cuando el backend falla. ``expect_response``
+          se registra *antes* del click para no perder respuestas rápidas.
+        * Ante un 5xx se reintenta la acción (``QA_UI_AJAX_RETRIES``, 1 por defecto), igual que un
+          usuario que vuelve a hacer click. El backend de este sitio público devuelve 503
+          intermitentes (observado en CI tanto en ``add_to_cart`` como en ``delete_cart``).
+        * El reintento **no esconde** el problema: cada 5xx se registra en el log, se adjunta a
+          Allure y se emite como ``EnvironmentInstabilityWarning``, visible en el resumen de pytest.
+        * Un 4xx nunca se reintenta: no es transitorio, es un posible bug del producto.
+        * La pausa entre intentos es la única espera fija del framework y es deliberada: no espera
+          un estado de la UI (para eso está ``expect``), sino que da aire a un backend saturado.
 
         Args:
             target: Elemento a clickear.
             url_fragment: Parte de la URL de la petición esperada (``"/delete_cart/"``).
 
         Raises:
-            BackendUnavailableError: Si el backend respondió 5xx (fallo de entorno).
+            BackendUnavailableError: Si el backend respondió 5xx en todos los intentos (fallo de entorno).
             AssertionError: Si respondió otro status de error (posible bug del producto).
         """
-        with self.page.expect_response(lambda r: url_fragment in r.url) as response_info:
-            target.click()
-        response = response_info.value
-        if response.ok:
-            return
-        detail = f"{response.request.method} {response.url} → HTTP {response.status}"
-        if response.status >= 500:
-            raise BackendUnavailableError(
-                f"El backend falló ({detail}). El sitio no muestra el error en la UI: la acción "
-                "simplemente no ocurre. Fallo de entorno, no del producto."
-            )
-        raise AssertionError(f"La acción AJAX respondió con error ({detail}): posible bug del producto")
+        settings = get_settings()
+        attempts = 1 + settings.ui_ajax_retries
+        for attempt in range(1, attempts + 1):
+            with self.page.expect_response(lambda r: url_fragment in r.url) as response_info:
+                target.click()
+            response = response_info.value
+            if response.ok:
+                return
+            detail = f"{response.request.method} {response.url} → HTTP {response.status}"
+            if response.status < 500:
+                raise AssertionError(f"La acción AJAX respondió con error ({detail}): posible bug del producto")
+            if attempt == attempts:
+                raise BackendUnavailableError(
+                    f"El backend falló en {attempts} intento(s) ({detail}). El sitio no muestra el error en la "
+                    "UI: la acción simplemente no ocurre. Fallo de entorno, no del producto."
+                )
+            notice = f"Backend inestable: {detail} (intento {attempt}/{attempts}); se reintenta la acción"
+            self.logger.warning(notice)
+            allure.attach(notice, name="reintento-por-5xx", attachment_type=allure.attachment_type.TEXT)
+            warnings.warn(notice, EnvironmentInstabilityWarning, stacklevel=2)
+            self.page.wait_for_timeout(settings.ui_ajax_retry_backoff_ms)
 
     @step("Scroll hasta el final de la página")
     def scroll_to_bottom(self) -> None:
