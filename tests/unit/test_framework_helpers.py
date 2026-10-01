@@ -8,15 +8,18 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
+import re
 
 import pytest
 
 from framework.core.logger import MASK, mask_sensitive
+from framework.core.reporting import ALLURE_CATEGORIES
 from framework.core.step import _render_title
 from framework.data import PaymentCardFactory, UserFactory
 from framework.data.models import SUPPORTED_COUNTRIES
 from framework.performance.stats import percentile, summarize
 from framework.ui.browser_setup import AD_DOMAINS_PATTERN, is_bot_challenge, site_unavailability_reason
+from framework.ui.session import HttpLoginError, login_via_http
 from framework.utils.parsing import parse_price
 
 pytestmark = pytest.mark.unit
@@ -191,3 +194,120 @@ class TestSiteUnavailabilityDiagnosis:
     def test_real_page_has_no_diagnosis(self):
         page = _FakePage("Automation Exercise", "Full-Fledged practice website for Automation Engineers")
         assert site_unavailability_reason(page) is None  # type: ignore[arg-type]
+
+
+class _FakeResponse:
+    def __init__(self, text: str, status: int = 200, url: str = "https://example.test/") -> None:
+        self._text, self.status, self.url = text, status, url
+
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status < 400
+
+    def text(self) -> str:
+        return self._text
+
+
+class _FakeRequest:
+    """Doble de ``APIRequestContext``: registra las llamadas y devuelve respuestas predefinidas."""
+
+    def __init__(self, login_page: str, post_response: _FakeResponse) -> None:
+        self._login_page, self._post_response = login_page, post_response
+        self.posted: dict[str, object] = {}
+
+    def get(self, _url: str) -> _FakeResponse:
+        return _FakeResponse(self._login_page)
+
+    def post(self, url: str, form: dict[str, str], headers: dict[str, str]) -> _FakeResponse:
+        self.posted = {"url": url, "form": form, "headers": headers}
+        return self._post_response
+
+
+class _FakeContext:
+    def __init__(self, request: _FakeRequest) -> None:
+        self.request = request
+
+
+_LOGIN_HTML = """
+<form action="/search" method="GET"><input name="csrfmiddlewaretoken" value="OTRO-FORM"></form>
+<div class="login-form"><form action="/login" method="POST">
+  <input type="hidden" name="csrfmiddlewaretoken" value="TOKEN-123">
+  <input data-qa="login-email" name="email"></form></div>
+"""
+
+
+class TestLoginViaHttp:
+    def test_sends_login_form_token_and_referer(self):
+        request = _FakeRequest(_LOGIN_HTML, _FakeResponse("<a>Logged in as <b>QA</b></a>"))
+
+        login_via_http(_FakeContext(request), "https://site.test", "qa@example.com", "secret")  # type: ignore[arg-type]
+
+        # Debe usar el token del formulario de LOGIN, no el de otro formulario de la página.
+        assert request.posted["form"] == {
+            "csrfmiddlewaretoken": "TOKEN-123",
+            "email": "qa@example.com",
+            "password": "secret",
+        }
+        assert request.posted["headers"] == {"Referer": "https://site.test/login"}
+
+    def test_missing_csrf_token_fails_clearly(self):
+        request = _FakeRequest("<html>sin formulario</html>", _FakeResponse(""))
+
+        with pytest.raises(HttpLoginError, match="token CSRF"):
+            login_via_http(_FakeContext(request), "https://site.test", "qa@example.com", "x")  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "response",
+        [
+            pytest.param(_FakeResponse("Your email or password is incorrect!"), id="credenciales-invalidas"),
+            pytest.param(_FakeResponse("Forbidden (CSRF)", status=403), id="csrf-rechazado"),
+        ],
+    )
+    def test_failed_login_raises(self, response):
+        request = _FakeRequest(_LOGIN_HTML, response)
+
+        with pytest.raises(HttpLoginError, match="no inició sesión"):
+            login_via_http(_FakeContext(request), "https://site.test", "qa@example.com", "x")  # type: ignore[arg-type]
+
+
+def _allure_category(status: str, message: str, trace: str) -> str:
+    """Replica la selección de Allure: la PRIMERA categoría que coincide (matches() de Java = fullmatch)."""
+    for category in ALLURE_CATEGORIES:
+        if status not in category["matchedStatuses"]:
+            continue
+        if "messageRegex" in category and not re.fullmatch(category["messageRegex"], message):
+            continue
+        if "traceRegex" in category and not re.fullmatch(category["traceRegex"], trace):
+            continue
+        return str(category["name"])
+    return "sin categoría"
+
+
+class TestAllureCategories:
+    @pytest.mark.parametrize(
+        ("status", "message", "trace", "expected"),
+        [
+            pytest.param(
+                "failed",
+                "Locator expected to be visible",
+                "Traceback...\nframework.ui.browser_setup.SiteUnavailableError: HTTP 403\n",
+                "Fallo de entorno",
+                id="entorno-gana-a-timeout",
+            ),
+            pytest.param(
+                "failed",
+                "assert ...",
+                "E   pydantic_core._pydantic_core.ValidationError: 1 validation error",
+                "Contrato de API",
+                id="contrato",
+            ),
+            pytest.param("failed", "home: violaciones graves nuevas:\n - x", "", "Accesibilidad", id="a11y"),
+            pytest.param(
+                "failed", "Locator expected to have text 'X'\nActual value: None", "", "Timeout de UI", id="timeout"
+            ),
+            pytest.param("failed", "assert 3 == 2", "", "Fallo de producto", id="producto"),
+            pytest.param("broken", "KeyError: 'x'", "Traceback ... KeyError", "Error del test", id="error-test"),
+        ],
+    )
+    def test_failures_land_in_the_right_category(self, status, message, trace, expected):
+        assert _allure_category(status, message, trace).startswith(expected)

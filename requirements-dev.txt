@@ -18,6 +18,10 @@ attrs==26.1.0
     # via
     #   -c requirements.txt
     #   allure-python-commons
+axe-playwright-python==0.1.8
+    # via
+    #   -c requirements.txt
+    #   -r requirements.in
 bidict==0.24.1
     # via
     #   -c requirements.txt
@@ -159,6 +163,7 @@ playwright==1.63.0
     # via
     #   -c requirements.txt
     #   -r requirements.in
+    #   axe-playwright-python
     #   pytest-playwright
 pluggy==1.6.0
     # via

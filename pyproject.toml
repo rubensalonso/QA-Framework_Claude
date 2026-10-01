@@ -37,6 +37,8 @@ markers = [
     "performance: Pruebas de rendimiento (web vitals / SLA de API).",
     "negative: Casos negativos y casos borde.",
     "security: Payloads maliciosos (inyección, XSS) — validan que la app no se rompa.",
+    "mobile: Comportamiento en móvil; requiere --device (p. ej. \"Pixel 7\").",
+    "a11y: Accesibilidad (axe-core, WCAG 2.1 A/AA).",
 ]
 # Logging: pytest captura los logs y los adjunta al reporte cuando un test falla.
 log_level = "INFO"
@@ -103,7 +105,7 @@ warn_unused_ignores = true
 exclude = ["^\\.venv/", "^reports/", "^test-results/"]
 
 [[tool.mypy.overrides]]
-module = ["allure.*", "allure_commons.*", "locust.*", "pytest_html.*", "faker.*"]
+module = ["allure.*", "allure_commons.*", "locust.*", "pytest_html.*", "faker.*", "axe_playwright_python.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

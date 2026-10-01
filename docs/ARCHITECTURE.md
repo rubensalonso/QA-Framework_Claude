@@ -123,6 +123,12 @@ Dos tests lo verifican simulando el backend con `page.route`: 503 persistente
 - Así el test de login no falla si se rompe el registro: cada test falla por **una** razón.
 - La API también actúa como **oráculo**: la UI debe mostrar exactamente lo que la API devuelve.
 
+**Login por HTTP para las precondiciones.** `logged_in_user` envía el formulario de login por HTTP
+(`framework/ui/session.py`) con `context.request`, que comparte cookies con el navegador, respetando el
+CSRF de Django. Se descartó reutilizar una sesión entre tests (`storage_state`): en este sitio el carrito
+de un usuario logueado vive en el servidor, y compartir usuario haría que los tests se ensucien el
+carrito entre sí. Cada test mantiene su usuario propio.
+
 ### 3.9 Aislamiento total entre tests
 - Cada test recibe un **contexto de navegador nuevo** (cookies, storage y carrito vacíos).
 - Cada test genera **datos únicos** (UUID en el email): pueden correr en cualquier orden y en paralelo.
@@ -150,6 +156,18 @@ Dos tests lo verifican simulando el backend con `page.route`: 503 persistente
 - `pydantic-settings` valida tipos y rangos al arrancar. Precedencia: entorno > `.env` > defaults.
 - `api_base_url` fuerza la barra final: sin ella, `"api" + "productsList"` se resolvería (RFC 3986) como
   `/productsList`. Es un bug clásico y silencioso que queda prevenido por diseño.
+
+### 3.14 Reporte como herramienta de triage
+- `framework/core/reporting.py` define **categorías de fallo** de Allure (entorno, contrato, accesibilidad,
+  precondición, timeout, producto, error del test). Un test unitario replica la lógica de selección de
+  Allure para que un regex mal escrito no clasifique mal los fallos en silencio.
+- El reporte se publica en GitHub Pages y recupera el historial del sitio publicado antes de generarse:
+  así muestra tendencias, duración y tests flaky a lo largo de las corridas.
+- Solo `main` publica: un PR no puede pisar el reporte público ni contaminar su historial.
+
+### 3.15 Emulación móvil y accesibilidad
+- `browser_context_args` respeta `--device`: el viewport fijo de escritorio solo se aplica sin emulación.
+- Accesibilidad con baseline "trinquete": ver [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
 ## 4. Puntos de extensión
 

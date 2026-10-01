@@ -54,9 +54,11 @@ AutomationExercise ganó porque **un solo sitio cubre las tres capas** que un fr
 
 | Suite | Cantidad* | Qué valida |
 |---|---|---|
-| `tests/unit` | 44 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno |
+| `tests/unit` | 54 | El propio framework: parseo, percentiles, enmascarado de secretos, factories, diagnóstico de entorno, login HTTP, categorías de Allure |
 | `tests/api` | 50 | Contratos (Pydantic), códigos de negocio, CRUD de cuentas, métodos no soportados, inyección |
 | `tests/ui` | 66 | Registro, login, catálogo, búsqueda, filtros, carrito, checkout, pago, factura, contacto, navegación |
+| `tests/ui` (a11y) | 9 | Accesibilidad WCAG 2.1 A/AA con axe-core y baseline con trinquete |
+| `tests/ui` (mobile) | 7 | Layout responsive y gestos táctiles con emulación de dispositivo (`--device`) |
 | `tests/performance` | 14 | Navigation Timing, Core Web Vitals (LCP/CLS), SLA de latencia p95 de API |
 | `performance/load` | — | Prueba de carga con Locust (con topes de seguridad incorporados) |
 
@@ -201,6 +203,16 @@ pytest -m ui -o log_cli=true                          # logs en vivo en la conso
 
 > En PowerShell, las variables de entorno se definen así: `$env:PWDEBUG=1; pytest ...`
 
+### Móvil y accesibilidad
+
+```bash
+pytest -m "(smoke and ui) or mobile" --device "Pixel 7"   # smoke + tests móviles emulando un Pixel 7
+pytest -m a11y                                            # auditoría WCAG 2.1 AA (ver docs/ACCESSIBILITY.md)
+```
+
+Cualquier perfil de [dispositivos de Playwright](https://playwright.dev/python/docs/emulation) sirve:
+`--device "iPhone 15" --browser webkit`, `--device "Galaxy S24"`, etc.
+
 ### En paralelo
 
 ```bash
@@ -222,7 +234,11 @@ Ver [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) para escenarios, criterios de a
 
 ## Reportes y evidencias
 
-Cada ejecución genera, sin configuración adicional:
+📊 **Reporte publicado:** https://rubensalonso.github.io/QA-Framework_Claude/ — se actualiza con cada corrida de
+`main` e incluye **tendencias entre corridas, tests flaky, reintentos y fallos agrupados por categoría**
+(entorno, contrato de API, accesibilidad, timeout de UI, producto).
+
+Cada ejecución local genera, sin configuración adicional:
 
 | Artefacto | Ubicación | Cómo verlo |
 |---|---|---|
@@ -271,7 +287,8 @@ Los valores se validan al arrancar: `QA_DEFAULT_TIMEOUT_MS=abc` falla de inmedia
 |---|---|
 | Pull request | Lock al día + pre-commit (ruff, mypy) + unit → API → UI smoke (Chromium) |
 | Push a `main` | Todo lo anterior + UI regresión en Chromium y Firefox |
-| Nightly (L-V) | Regresión completa + performance + carga |
+| Nightly (L-V) | Regresión completa + smoke en móvil (Pixel 7) + performance + carga |
+| Push a `main` / nightly | Publica el reporte Allure en GitHub Pages, con historial |
 | Manual | Marker y navegador a elección |
 
 Todos los jobs publican reportes, traces y logs como artefactos, y un job final unifica los resultados
@@ -309,4 +326,5 @@ de red. Ver [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 | [`docs/TEST_CATALOG.md`](docs/TEST_CATALOG.md) | Catálogo de casos de prueba y trazabilidad con los test cases del sitio |
 | [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Estrategia de performance: web vitals, SLA de API y carga |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Lock de dependencias, Dependabot y pre-commit |
+| [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) | Auditoría WCAG con axe-core y baseline con trinquete |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Problemas frecuentes y cómo diagnosticarlos |

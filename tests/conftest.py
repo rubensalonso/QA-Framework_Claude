@@ -18,6 +18,7 @@ Mapa de fixtures (scope → propósito):
 from __future__ import annotations
 
 import base64
+import json
 import os
 import platform
 from collections.abc import Callable, Generator, Iterator
@@ -32,6 +33,7 @@ from framework.api import AutomationExerciseApi
 from framework.config import Settings, get_settings
 from framework.config.settings import PROJECT_ROOT
 from framework.core.logger import configure_logging, get_logger
+from framework.core.reporting import ALLURE_CATEGORIES
 from framework.data import User, UserFactory
 from framework.ui.browser_setup import (
     SiteUnavailableError,
@@ -61,9 +63,9 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_sessionfinish(session: pytest.Session) -> None:
-    """Escribe ``environment.properties`` para el widget 'Environment' de Allure.
+    """Escribe ``environment.properties`` y ``categories.json`` para el reporte de Allure.
 
-    Solo lo hace el proceso controlador (no los workers de xdist) para no pisar el archivo.
+    Solo lo hace el proceso controlador (no los workers de xdist) para no pisar los archivos.
     """
     if hasattr(session.config, "workerinput"):
         return
@@ -81,8 +83,11 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
         "Ads.Blocked": settings.block_ads,
         "Python": platform.python_version(),
         "OS": platform.platform(terse=True),
+        "Device": session.config.getoption("--device", default=None) or "desktop",
     }
     (path / "environment.properties").write_text("\n".join(f"{k}={v}" for k, v in properties.items()), encoding="utf-8")
+    # Categorías de fallo: el reporte agrupa cada error (entorno, contrato, a11y, producto...).
+    (path / "categories.json").write_text(json.dumps(ALLURE_CATEGORIES, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -152,18 +157,21 @@ def base_url(request: pytest.FixtureRequest, settings: Settings) -> str:
 # Navegador
 # =============================================================================
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args: dict[str, Any], settings: Settings) -> dict[str, Any]:
+def browser_context_args(
+    browser_context_args: dict[str, Any], settings: Settings, device: str | None
+) -> dict[str, Any]:
     """Extiende los argumentos del contexto definidos por pytest-playwright.
 
     Viewport y locale fijos → renderizado determinístico (evita que el layout responsive
     cambie entre la máquina del desarrollador y el runner de CI).
+
+    Con ``--device "Pixel 7"`` se respeta el perfil del dispositivo (viewport, user agent, touch,
+    escala): fijar el viewport de escritorio encima anularía la emulación móvil.
     """
-    return {
-        **browser_context_args,
-        "viewport": {"width": settings.viewport_width, "height": settings.viewport_height},
-        "locale": settings.locale,
-        "accept_downloads": True,
-    }
+    args = {**browser_context_args, "locale": settings.locale, "accept_downloads": True}
+    if device is None:
+        args["viewport"] = {"width": settings.viewport_width, "height": settings.viewport_height}
+    return args
 
 
 @pytest.fixture(scope="session")

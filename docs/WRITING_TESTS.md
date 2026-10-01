@@ -137,7 +137,7 @@ Cada caso del JSON debe tener un `id` único y descriptivo: es lo que aparece en
 | `settings` | session | Configuración tipada |
 | `new_user` | function | `User` con datos únicos, **sin** registrar |
 | `registered_user` | function | `User` registrado por API; se elimina al terminar |
-| `logged_in_user` | function | `registered_user` + sesión iniciada en `page` (solo UI) |
+| `logged_in_user` | function | `registered_user` + sesión iniciada en `page` por HTTP, sin pasar por el formulario (solo UI) |
 | `account_cleanup` | function | `account_cleanup(user)` → borra la cuenta al terminar |
 | `tmp_path` | function | Carpeta temporal única (pytest), p. ej. para descargas |
 

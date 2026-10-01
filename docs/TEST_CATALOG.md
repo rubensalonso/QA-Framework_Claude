@@ -1,6 +1,6 @@
 # Catálogo de casos de prueba
 
-**174 tests** en total (cada combinación parametrizada cuenta como uno): 44 unit · 50 API · 66 UI · 14 performance.
+**200 tests** en total (cada combinación parametrizada cuenta como uno): 54 unit · 50 API · 66 UI · 9 accesibilidad · 7 móvil · 14 performance.
 Regenerar el listado: `pytest --collect-only -q`.
 
 Leyenda de tipo: ✅ positivo · ❌ negativo / borde · 🔒 seguridad · 🔁 E2E
@@ -149,6 +149,22 @@ APIs oficiales 1–14: todas cubiertas en `tests/api/` (ver secciones siguientes
 | `test_scroll_up_with_arrow` | ✅ | TC25 |
 | `test_scroll_up_without_arrow` | ✅ | TC26 |
 
+## Accesibilidad — `tests/ui/test_accessibility.py`
+
+| Test | Valida |
+|---|---|
+| `test_detects_known_violations` | El motor detecta `image-alt`, `button-name` y `color-contrast` en HTML controlado (offline) |
+| `test_accessible_page_is_clean` | Una página accesible no reporta violaciones (sin falsos positivos) |
+| `test_baseline_ratchet` | Tolera lo conocido, bloquea lo nuevo grave y detecta lo corregido |
+| `test_no_new_serious_violations` ×6 | WCAG 2.1 A/AA en home, productos, detalle, login, carrito y contacto (solo Chromium) |
+
+## Móvil — `tests/ui/test_responsive.py` (requiere `--device`)
+
+| Test | Valida |
+|---|---|
+| `test_no_horizontal_overflow` ×6 | Ninguna página obliga a scrollear de costado; lista los elementos que desbordan |
+| `test_add_to_cart_with_tap` | Agregar al carrito con un toque real (`tap()`, eventos táctiles) |
+
 ## Performance — `tests/performance/`
 
 | Test | Valida |
@@ -159,5 +175,5 @@ APIs oficiales 1–14: todas cubiertas en `tests/api/` (ver secciones siguientes
 
 ## Unit — `tests/unit/`
 
-44 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
+54 tests sobre el propio framework: parseo de precios, percentiles, enmascarado de secretos en logs
 y en `repr`, unicidad e inmutabilidad de factories, patrón de bloqueo de ads y diagnóstico de fallos de entorno (muros anti-bot, sobrecarga del hosting).

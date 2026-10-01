@@ -139,6 +139,39 @@ jobs:
             logs/
           retention-days: 14
 
+  ui-mobile:
+    name: UI móvil (Pixel 7)
+    needs: lint
+    # Solo nightly y manual: suma tráfico contra un sitio público, no hace falta en cada push.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      # Smoke de UI completo + tests específicos de móvil, con el perfil de dispositivo de Playwright
+      # (viewport, user agent, densidad de píxeles y eventos táctiles).
+      - name: Ejecutar smoke en móvil
+        run: >
+          pytest -m "(smoke and ui) or mobile"
+          --browser chromium --device "Pixel 7"
+          -n ${{ env.XDIST_WORKERS }}
+          --reruns 1 --reruns-delay 5
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ui-reports-mobile
+          path: |
+            reports/
+            test-results/
+            logs/
+          retention-days: 14
+
   performance:
     name: Performance
     needs: [api, ui]
@@ -167,10 +200,20 @@ jobs:
 
   allure-report:
     name: Reporte Allure
-    needs: [api, ui]
-    if: always()
+    needs: [api, ui, ui-mobile, performance]
+    # always(): el reporte se genera aunque haya fallos (es justamente cuando más se necesita),
+    # y aunque ui-mobile/performance no hayan corrido (push sin nightly).
+    if: always() && needs.api.result != 'cancelled'
     runs-on: ubuntu-24.04
+    outputs:
+      publish: ${{ steps.publish.outputs.enabled }}
+    env:
+      ALLURE_VERSION: "2.46.1"
     steps:
+      - name: ¿Publicar en Pages?
+        id: publish
+        # Solo main (push, nightly o manual): los PRs no deben pisar el reporte público ni su historial.
+        run: echo "enabled=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v8
         with:
           pattern: "*-reports*"
@@ -179,16 +222,63 @@ jobs:
         run: |
           mkdir -p allure-results
           find downloaded -path "*allure-results*" -type f -exec cp {} allure-results/ \;
+      - name: Recuperar historial del reporte publicado
+        # Allure calcula tendencias y detecta tests flaky comparando con corridas anteriores. Ese
+        # historial vive en el propio sitio publicado: se descarga antes de generar el reporte nuevo.
+        # En la primera publicación no existe (404) y simplemente se arranca sin historial.
+        run: |
+          mkdir -p allure-results/history
+          base="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/history"
+          for f in history.json history-trend.json duration-trend.json retry-trend.json categories-trend.json; do
+            curl -sfL "$base/$f" -o "allure-results/history/$f" || rm -f "allure-results/history/$f"
+          done
+          ls allure-results/history
+      - name: Datos de la ejecución (executor)
+        # Agrega al reporte el link a la corrida de CI y numera los builds en las tendencias.
+        run: |
+          cat > allure-results/executor.json <<JSON
+          {"name": "GitHub Actions", "type": "github",
+           "buildName": "#${{ github.run_number }} (${{ github.event_name }})",
+           "buildOrder": ${{ github.run_number }},
+           "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+           "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"}
+          JSON
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
       - name: Generar reporte
+        # Versión fijada y descargada del release oficial (no `npm install` sin versión).
         run: |
-          npm install -g allure-commandline
-          allure generate allure-results --clean -o allure-report
+          curl -sfL "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz" | tar -xz
+          "./allure-${ALLURE_VERSION}/bin/allure" generate allure-results --clean -o allure-report
       - uses: actions/upload-artifact@v7
         with:
           name: allure-report
           path: allure-report
           retention-days: 30
+      - name: Preparar sitio de Pages
+        if: steps.publish.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: allure-report
+
+  publish-report:
+    name: Publicar reporte en Pages
+    needs: allure-report
+    if: always() && needs.allure-report.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    # Permisos mínimos y solo en este job: el resto del pipeline no puede escribir en Pages.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    # Dos publicaciones simultáneas no se pisan: la nueva espera a que termine la anterior.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
