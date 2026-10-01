@@ -288,6 +288,7 @@ Los valores se validan al arrancar: `QA_DEFAULT_TIMEOUT_MS=abc` falla de inmedia
 | Pull request | Lock al día + pre-commit (ruff, mypy) + unit → API → UI smoke (Chromium) |
 | Push a `main` | Todo lo anterior + UI regresión en Chromium y Firefox |
 | Nightly (L-V) | Regresión completa + smoke en móvil (Pixel 7) + performance + carga |
+| Push a `main` / nightly / manual | Auditoría de accesibilidad en job propio (hoy en rojo: el sitio no cumple WCAG AA, ver [ACCESSIBILITY.md](docs/ACCESSIBILITY.md)) |
 | Push a `main` / nightly | Publica el reporte Allure en GitHub Pages, con historial |
 | Manual | Marker y navegador a elección |
 

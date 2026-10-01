@@ -117,9 +117,9 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "marker=smoke and ui" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "marker=${{ inputs.marker }} and ui" >> "$GITHUB_OUTPUT"
+            echo "marker=(${{ inputs.marker }}) and ui and not a11y" >> "$GITHUB_OUTPUT"
           else
-            echo "marker=regression and ui and not security" >> "$GITHUB_OUTPUT"
+            echo "marker=regression and ui and not security and not a11y" >> "$GITHUB_OUTPUT"
           fi
       - name: Ejecutar tests de UI
         # --reruns: SOLO en CI y con 1 reintento. Un test que necesita reintentos se reporta
@@ -138,6 +138,34 @@ jobs:
             test-results/
             logs/
           retention-days: 14
+
+  a11y:
+    name: Accesibilidad (WCAG 2.1 AA)
+    needs: lint
+    # Job propio: por decisión del proyecto NO hay baseline, así que falla mientras el sitio no
+    # cumpla WCAG AA (ver docs/ACCESSIBILITY.md). Separado de "UI" para que ese rojo conocido no
+    # tape la señal de los tests funcionales. Sin --reruns: un fallo de a11y es determinístico.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      - name: Auditoría axe-core
+        run: pytest -m a11y --browser chromium
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-reports
+          path: |
+            reports/
+            logs/
+          retention-days: 30
 
   ui-mobile:
     name: UI móvil (Pixel 7)
@@ -200,7 +228,7 @@ jobs:
 
   allure-report:
     name: Reporte Allure
-    needs: [api, ui, ui-mobile, performance]
+    needs: [api, ui, a11y, ui-mobile, performance]
     # always(): el reporte se genera aunque haya fallos (es justamente cuando más se necesita),
     # y aunque ui-mobile/performance no hayan corrido (push sin nightly).
     if: always() && needs.api.result != 'cancelled'
