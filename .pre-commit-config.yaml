@@ -8,6 +8,9 @@
 # rechaza (o al revés) por una diferencia de versión. Requiere tener el venv activado al commitear.
 
 default_install_hook_types: [pre-commit, pre-push]
+# Sin esto, los hooks sin `stages` corren en TODAS las etapas instaladas: ruff y mypy se ejecutarían
+# dos veces (commit y push). Por defecto solo en commit; los tests unitarios declaran pre-push.
+default_stages: [pre-commit]
 
 repos:
   # Higiene general de archivos (sin dependencias del proyecto).

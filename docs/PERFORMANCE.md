@@ -60,7 +60,7 @@ Escenario: usuarios que navegan el catálogo por API con pausas humanas de 1–3
 
 | Criterio | Variable | Default |
 |---|---|---|
-| Tasa de error máxima | `QA_LOAD_MAX_FAIL_RATIO` | 1 % |
+| Tasa de error máxima | `QA_LOAD_MAX_FAIL_RATIO` | 5 % (sitio público; usar 1 % contra un entorno propio) |
 | p95 global máximo | `QA_LOAD_P95_MS` | 3000 ms |
 | Usuarios máximos permitidos | `QA_LOAD_MAX_USERS` | 5 |
 
