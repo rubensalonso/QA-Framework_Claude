@@ -4,7 +4,7 @@
 -c requirements.txt
 -r requirements.in
 
-ruff>=0.6
-mypy>=1.11
-uv>=0.8             # uv pip compile --universal: regenera los .txt a partir de los .in
+ruff>=0.16.10
+mypy>=2.4.0
+uv>=0.12.22             # uv pip compile --universal: regenera los .txt a partir de los .in
 pre-commit>=4.0     # hooks de calidad antes de cada commit
