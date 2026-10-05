@@ -39,11 +39,6 @@ certifi==2026.7.22
     #   -c requirements.txt
     #   geventhttpclient
     #   requests
-cffi==2.1.1 ; (implementation_name == 'pypy' and platform_python_implementation != 'CPython') or (implementation_name == 'pypy' and sys_platform != 'win32') or (platform_python_implementation == 'CPython' and sys_platform == 'win32')
-    # via
-    #   -c requirements.txt
-    #   gevent
-    #   pyzmq
 cfgv==3.5.0
     # via pre-commit
 charset-normalizer==3.5.2
@@ -54,10 +49,6 @@ click==8.5.0
     # via
     #   -c requirements.txt
     #   flask
-colorama==0.4.6 ; sys_platform == 'win32'
-    # via
-    #   -c requirements.txt
-    #   pytest
 configargparse==1.8.0
     # via
     #   -c requirements.txt
@@ -127,7 +118,7 @@ jinja2==3.1.6
     #   -c requirements.txt
     #   flask
     #   pytest-html
-librt==0.16.0 ; platform_python_implementation != 'PyPy'
+librt==0.16.0
     # via mypy
 locust==2.46.6
     # via
@@ -143,7 +134,7 @@ msgpack==1.2.3
     # via
     #   -c requirements.txt
     #   locust
-mypy==2.3.1
+mypy==2.4.0
     # via -r requirements-dev.in
 mypy-extensions==1.1.0
     # via mypy
@@ -176,10 +167,6 @@ psutil==7.2.2
     # via
     #   -c requirements.txt
     #   locust
-pycparser==3.0 ; (implementation_name == 'pypy' and platform_python_implementation != 'CPython') or (implementation_name != 'PyPy' and platform_python_implementation == 'CPython' and sys_platform == 'win32') or (implementation_name == 'pypy' and sys_platform != 'win32')
-    # via
-    #   -c requirements.txt
-    #   cffi
 pydantic==2.13.5
     # via
     #   -c requirements.txt
@@ -257,11 +244,7 @@ python-slugify==8.0.4
     # via
     #   -c requirements.txt
     #   pytest-playwright
-python-socketio==5.17.0
-    # via
-    #   -c requirements.txt
-    #   locust
-pywin32==312 ; sys_platform == 'win32'
+python-socketio[client]==5.17.0
     # via
     #   -c requirements.txt
     #   locust
@@ -277,7 +260,7 @@ requests==2.34.2
     #   locust
     #   pytest-base-url
     #   python-socketio
-ruff==0.16.9
+ruff==0.16.10
     # via -r requirements-dev.in
 simple-websocket==1.1.0
     # via
@@ -302,15 +285,11 @@ typing-inspection==0.4.4
     #   -c requirements.txt
     #   pydantic
     #   pydantic-settings
-tzdata==2026.4 ; sys_platform == 'win32'
-    # via
-    #   -c requirements.txt
-    #   faker
 urllib3==2.8.0
     # via
     #   -c requirements.txt
     #   requests
-uv==0.12.21
+uv==0.12.22
     # via -r requirements-dev.in
 virtualenv==21.14.2
     # via pre-commit
