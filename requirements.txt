@@ -20,16 +20,10 @@ certifi==2026.7.22
     # via
     #   geventhttpclient
     #   requests
-cffi==2.1.1 ; (implementation_name == 'pypy' and platform_python_implementation != 'CPython') or (implementation_name == 'pypy' and sys_platform != 'win32') or (platform_python_implementation == 'CPython' and sys_platform == 'win32')
-    # via
-    #   gevent
-    #   pyzmq
 charset-normalizer==3.5.2
     # via requests
 click==8.5.0
     # via flask
-colorama==0.4.6 ; sys_platform == 'win32'
-    # via pytest
 configargparse==1.8.0
     # via locust
 execnet==2.1.2
@@ -91,8 +85,6 @@ pluggy==1.6.0
     #   pytest
 psutil==7.2.2
     # via locust
-pycparser==3.0 ; (implementation_name == 'pypy' and platform_python_implementation != 'CPython') or (implementation_name != 'PyPy' and platform_python_implementation == 'CPython' and sys_platform == 'win32') or (implementation_name == 'pypy' and sys_platform != 'win32')
-    # via cffi
 pydantic==2.13.5
     # via
     #   -r requirements.in
@@ -110,20 +102,17 @@ pytest==9.1.1
     #   -r requirements.in
     #   allure-pytest
     #   locust
-    #   pytest-base-url
     #   pytest-html
     #   pytest-metadata
     #   pytest-playwright
     #   pytest-rerunfailures
     #   pytest-timeout
     #   pytest-xdist
-pytest-base-url==2.1.0
-    # via pytest-playwright
 pytest-html==4.2.0
     # via -r requirements.in
 pytest-metadata==3.1.1
     # via pytest-html
-pytest-playwright==0.9.0
+pytest-playwright==0.10.0
     # via -r requirements.in
 pytest-rerunfailures==16.7
     # via -r requirements.in
@@ -139,16 +128,13 @@ python-engineio==4.14.0
     #   python-socketio
 python-slugify==8.0.4
     # via pytest-playwright
-python-socketio==5.17.0
-    # via locust
-pywin32==312 ; sys_platform == 'win32'
+python-socketio[client]==5.17.0
     # via locust
 pyzmq==27.2.0
     # via locust
 requests==2.34.2
     # via
     #   locust
-    #   pytest-base-url
     #   python-socketio
 simple-websocket==1.1.0
     # via python-engineio
@@ -166,8 +152,6 @@ typing-inspection==0.4.4
     # via
     #   pydantic
     #   pydantic-settings
-tzdata==2026.4 ; sys_platform == 'win32'
-    # via faker
 urllib3==2.8.0
     # via requests
 websocket-client==1.9.2
