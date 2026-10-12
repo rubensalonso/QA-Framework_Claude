@@ -18,7 +18,7 @@ allure-pytest>=2.13,<3         # reporte Allure
 # Datos, modelos y configuración
 pydantic>=2.8,<3
 pydantic-settings>=2.4,<3
-Faker>=28
+Faker>=40.42.0
 
 # Performance (carga)
 locust>=2.31,<3
