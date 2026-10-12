@@ -21,7 +21,7 @@ pydantic-settings>=2.4,<3
 Faker>=28
 
 # Performance (carga)
-locust>=2.31,<3
+locust>=2.46.7,<3
 
 # Accesibilidad (axe-core empaquetado; solo depende de playwright)
 axe-playwright-python>=0.1.8,<0.2
