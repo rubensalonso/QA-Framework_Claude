@@ -6,7 +6,7 @@
 # Núcleo
 playwright>=1.47,<2
 pytest>=8.3,<10
-pytest-playwright>=0.5.2,<1
+pytest-playwright>=0.10.0,<1
 
 # Plugins de pytest
 pytest-xdist>=3.6,<4           # ejecución en paralelo (-n auto)
